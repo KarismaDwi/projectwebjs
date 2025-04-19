@@ -2,23 +2,43 @@ const {DataTypes} = require('sequelize');
 const db = require('../config/database');
 
 const produk = db.define('produk', {
-    id: {
+    id_produk: {
         type: DataTypes.INTEGER(11),
-        primaryKey: true,
+        primaryKey: true,   
         autoIncrement: true
-    },
-    productName: {
-        type: DataTypes.STRING(255),
+        },
+    nama_produk: {
+        type: DataTypes.STRING(100),
         allowNull: false
     },
-    price: {
-        type: DataTypes.STRING(255),
+    harga: {
+        type: DataTypes.INTEGER(11),
+        allowNull: false
+    },
+    deskripsi: {
+        type: DataTypes.STRING(100),
+        allowNull: false
+    },
+    stok: {
+        type: DataTypes.INTEGER(11),
+        allowNull: false
+    },
+    gambar: {
+        type: DataTypes.STRING(100),
+        allowNull: false
+    },
+    ukuran: {
+        type: DataTypes.ENUM('Spray', 'Standard bloom', 'Full bloom', 'Bud', 'Mini bouquet', 'Grand bouquet'),
+        allowNull: false
+    },
+    warna: {
+        type: DataTypes.STRING(100),
         allowNull: true
     },
-    jumlah: {
-        type: DataTypes.INTEGER(11),
-        allowNull: false
-    }
+    kategori: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
 }, {
     freezeTableName: true
 });

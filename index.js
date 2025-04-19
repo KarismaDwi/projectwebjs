@@ -4,6 +4,8 @@ const express = require('express');
 const app = express();
 const db = require('./config/database');
 const router = require('./routes/router');
+const produk = require('./models/produkModels');
+const troli = require('./models/troliModels');
 
 
 app.use(express.json());
