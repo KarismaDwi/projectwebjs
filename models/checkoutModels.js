@@ -1,80 +1,85 @@
 const { DataTypes } = require('sequelize');
 const db = require('../config/database');
 const User = require('./userModels');
-const Product = require('./produkModels');
+const Payment = require('./paymentModels');
 
-// Membuat model Checkout
 const Checkout = db.define('Checkout', {
-    id_checkout: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
-    orderId: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,  // UUID otomatis
-        allowNull: false,
-        unique: true
-    },
-    deliveryMethod: {
-        type: DataTypes.ENUM('pickup', 'delivery'),
-        allowNull: false
-    },
-    recipientName: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    recipientPhone: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    address: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    postalCode: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    province: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    city: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    deliveryTime: {
-        type: DataTypes.DATE,
-        allowNull: false
-    },
-    paymentMethod: {
-        type: DataTypes.ENUM('bank_transfer', 'e_wallet'),
-        allowNull: false
-    },
-    paymentVia: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    subtotal: {
-        type: DataTypes.INTEGER,
-        allowNull: false
-    },
-    shippingCost: {
-        type: DataTypes.INTEGER,
-        defaultValue: 60000
-    },
-    totalPrice: {
-        type: DataTypes.INTEGER,
-        allowNull: false
-    },
-    paymentStatus: {  // Menambahkan status pembayaran
-        type: DataTypes.ENUM('pending', 'paid', 'failed'),
-        defaultValue: 'pending',  // Status awal adalah pending
-        allowNull: false
-    }
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  user_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  order_code: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+  receiver_name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  phone: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  address: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  payment_method: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  payer_name: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  delivery_date: {
+    type: DataTypes.DATEONLY,
+    allowNull: false
+  },
+  delivery_time: {
+    type: DataTypes.TIME,
+    allowNull: false
+  },
+  shipping_method: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  shipping_cost: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+  total_amount: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  proof_of_transfer: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  status: {
+    type: DataTypes.ENUM('pending', 'processing', 'completed', 'cancelled'),
+    defaultValue: 'pending'
+  }
 }, {
-    freezeTableName: true
+  freezeTableName: true,
+  timestamps: true
+});
+
+// RELASI
+Checkout.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+Checkout.hasOne(Payment, { foreignKey: 'checkout_id', as: 'payment' });
+
+const CheckoutDetail = require('./checkoutDetailModels');
+Checkout.hasMany(CheckoutDetail, {
+  foreignKey: 'checkout_id',
+  as: 'items'
 });
 
 module.exports = Checkout;

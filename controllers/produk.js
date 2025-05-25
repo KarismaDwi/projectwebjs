@@ -1,109 +1,206 @@
-const { Op } = require('sequelize'); // Mengimpor Op untuk operasi pencarian
-const produk = require('../models/produkModels');
-const multer = require('multer');
+const { Op } = require('sequelize'); 
+const Product = require('../models/produkModels');
 const path = require('path');
-const validRoles = ['Spray', 'Standard bloom', 'Full bloom', 'Bud', 'Mini bouquet', 'Grand bouquet']
+const fs = require('fs');
 
-// Setup multer untuk menyimpan gambar
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'upload/'); // Gambar akan disimpan di folder 'uploads'
-    },
-    filename: (req, file, cb) => {
-        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname)); // Menggunakan nama file yang unik
-    }
-});
+const validSizes = ['Spray', 'Standard bloom', 'Full bloom', 'Bud', 'Mini bouquet', 'Grand bouquet'];
 
-const fileFilter = (req, file, cb) => {
-    const allowesTypes = /jpeg|jpg|png/;
-    const extName = allowesTypes.test(path.extname(file.originalname).toLocaleLowerCase());
-    const mimeType = allowesTypes.test(file.mimetype);
-
-    if (extName && mimeType) {
-        cb(null, true);
-    } else {
-        cb(new Error('Only .jpeg, .jpg, and .png files are allowed!'));
-    }
+const validateSizes = (sizeString) => {
+  if (!sizeString) return false;
+  const sizes = sizeString.split(',').map(s => s.trim());
+  return sizes.every(size => validSizes.includes(size));
 };
 
-const upload = multer({ storage: storage, fileFilter: fileFilter });
-
-// Fungsi untuk menambah produk
-const AddProduk = async (req, res) => {
+const getProduk = async(req, res) => {
     try {
-        // Jika ada gambar, ambil nama file gambar
-        const gambar = req.file ? req.file.filename : null;
-        const { nama_produk, harga, deskripsi, stok, ukuran } = req.body;
-
-        if (!validRoles.includes(ukuran)){
-            return res.status(400).json({message: 'invalid size'});
-        }
-
-        // Menyimpan data produk ke database
-        await produk.create({ nama_produk, harga, deskripsi, stok, gambar, ukuran });
-
-        res.status(201).json({ message: 'Produk berhasil ditambahkan' });
+        const response = await Product.findAll();
+        res.json(response);
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: 'Error adding produk', error: error.message });
+        console.log(error.message);
+        res.status(500).json({ error: 'Failed to fetch products' });
     }
 };
 
-// Fungsi untuk menghapus produk
-const DeleteProduk = async (req, res) => {
-    const { id } = req.params;  // Mengambil id dari URL
-    try {
-        // Hapus produk berdasarkan id
-        const result = await produk.destroy({ where: { id_produk: id } });
-
-        if (result === 0) {
-            // Jika produk tidak ditemukan
-            return res.status(404).json({ message: 'Produk tidak ditemukan' });
-        }
-
-        res.status(200).json({ message: 'Produk deleted successfully' });
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: 'Error deleting produk', error: error.message });
-    }
-};
-// Fungsi untuk memperbarui produk
-const UpdateProduk = async (req, res) => {
+const getProdukById = async(req, res) => {
     const { id } = req.params;
-    const { nama_produk, harga, deskripsi, stok, ukuran } = req.body;
-
-    if (!validRoles.includes(ukuran)){
-        return res.status(400).json({message: 'invalid size'});
-    }
-
     try {
-        const gambar = req.file ? req.file.filename : null; // Mengambil gambar baru jika ada
-
-        await produk.update({ nama_produk, harga, deskripsi, stok, gambar, ukuran }, { where: { id_produk: id } });
-        res.status(200).json({ message: 'Produk updated successfully' });
+        const response = await Product.findOne({ where: { id_produk: id } });
+        if (!response) {
+            return res.status(404).json({ message: 'Produk not found' });
+        }
+        res.json(response);
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: 'Error updating produk', error: error.message });
+        console.log(error.message);
+        res.status(500).json({ error: 'Failed to fetch product' });
     }
 };
 
-// Fungsi untuk mencari produk berdasarkan keyword
-const searchProduk = async (req, res) => {
-    const { keyword } = req.params;
+const saveProduk = (req, res) => {
+  if (!req.files || !req.files.file) {
+    return res.status(400).json({ msg: "No image uploaded" });
+  }
+
+  const { name, harga, deskripsi, stok, warna, kategori, ukuran } = req.body;
+
+  if (!name || !harga || !deskripsi || !stok) {
+    return res.status(400).json({ msg: "Please fill in all required fields" });
+  }
+
+  if (ukuran && !validateSizes(ukuran)) {
+    return res.status(400).json({ msg: "Invalid size selection" });
+  }
+
+  const file = req.files.file;
+  const fileSize = file.data.length;
+  const ext = path.extname(file.name);
+  const fileName = file.md5 + ext;
+  const url = `${req.protocol}://${req.get('host')}/upload/${fileName}`;
+  const allowedType = ['.png', '.jpg', '.jpeg'];
+
+  if (!allowedType.includes(ext.toLowerCase())) {
+    return res.status(422).json({ msg: "Invalid image type" });
+  }
+  if (fileSize > 5000000) {
+    return res.status(422).json({ msg: "Image must be less than 5MB" });
+  }
+
+  file.mv(`./upload/${fileName}`, async (err) => {
+    if (err) return res.status(500).json({ msg: err.message });
+
     try {
-        const results = await produk.findAll({
+      await Product.create({
+        name,
+        harga,
+        deskripsi,
+        stok,
+        gambar: fileName,
+        url,
+        warna,
+        kategori,
+        ukuran: ukuran || 'Spray,Standard bloom,Full bloom,Bud,Mini bouquet,Grand bouquet'
+      });
+      res.status(201).json({ msg: "Product created successfully" });
+    } catch (error) {
+      console.log(error.message);
+      res.status(500).json({ msg: "Error saving product" });
+    }
+  });
+};
+
+const getProdukByKeyword = async (req, res) => {
+    const { keyword } = req.query;
+    try {
+        const response = await Product.findAll({
             where: {
-                nama_produk: {
-                    [Op.like]: `%${keyword}%` // Pencarian menggunakan LIKE
-                }
+                [Op.or]: [
+                    { name: { [Op.like]: `%${keyword}%` } },
+                    { deskripsi: { [Op.like]: `%${keyword}%` } },
+                    { kategori: { [Op.like]: `%${keyword}%` } },
+                    { warna: { [Op.like]: `%${keyword}%` } }
+                ]
             }
         });
-        res.status(200).json(results);
+        res.json(response);
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: 'Error searching produk', error: error.message });
+        console.log(error.message);
+        res.status(500).json({ error: 'Failed to fetch products by keyword' });
     }
 };
 
-// Ekspor controller untuk digunakan di router
-module.exports = { AddProduk, DeleteProduk, UpdateProduk, searchProduk, upload };
+const editProduk = async (req, res) => {
+    const { id } = req.params;
+    const { name, harga, deskripsi, stok, warna, kategori, ukuran } = req.body;
+
+    try {
+        const product = await Product.findOne({ where: { id_produk: id } });
+        if (!product) {
+            return res.status(404).json({ msg: 'Produk tidak ditemukan' });
+        }
+
+        if (ukuran && !validateSizes(ukuran)) {
+            return res.status(400).json({ msg: "Invalid size selection" });
+        }
+
+        const updateData = {
+            name,
+            harga,
+            deskripsi,
+            stok,
+            warna,
+            kategori,
+            ukuran: ukuran || product.ukuran
+        };
+
+        // Handle image update if provided
+        if (req.files && req.files.file) {
+            const file = req.files.file;
+            const fileSize = file.data.length;
+            const ext = path.extname(file.name);
+            const fileName = file.md5 + ext;
+            const url = `${req.protocol}://${req.get('host')}/upload/${fileName}`;
+            const allowedType = ['.png', '.jpg', '.jpeg'];
+
+            if (!allowedType.includes(ext.toLowerCase())) {
+                return res.status(422).json({ msg: "Invalid image type" });
+            }
+            if (fileSize > 5000000) {
+                return res.status(422).json({ msg: "Image must be less than 5MB" });
+            }
+
+            // Delete old image
+            try {
+                if (product.gambar) {
+                    fs.unlinkSync(`./upload/${product.gambar}`);
+                }
+            } catch (err) {
+                console.error("Error deleting old image:", err);
+            }
+
+            // Save new image
+            await file.mv(`./upload/${fileName}`);
+            updateData.gambar = fileName;
+            updateData.url = url;
+        }
+
+        await Product.update(updateData, { where: { id_produk: id } });
+        res.status(200).json({ msg: 'Produk berhasil diperbarui' });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ msg: 'Terjadi kesalahan saat memperbarui produk' });
+    }
+};
+
+const deleteProduk = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const product = await Product.findOne({ where: { id_produk: id } });
+        if (!product) {
+            return res.status(404).json({ msg: 'Produk tidak ditemukan' });
+        }
+
+        // Delete associated image
+        try {
+            if (product.gambar) {
+                fs.unlinkSync(`./upload/${product.gambar}`);
+            }
+        } catch (err) {
+            console.error("Error deleting image:", err);
+        }
+
+        await Product.destroy({ where: { id_produk: id } });
+        res.status(200).json({ msg: 'Produk berhasil dihapus' });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ msg: 'Terjadi kesalahan saat menghapus produk' });
+    }
+};
+
+module.exports = { 
+    getProduk, 
+    getProdukById, 
+    saveProduk, 
+    getProdukByKeyword, 
+    editProduk, 
+    deleteProduk 
+};

@@ -30,9 +30,20 @@ const User = db.define('user', {
     role: {
         type: DataTypes.ENUM('admin', 'user'),
         allowNull: false,
+    },
+    createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: db.literal('CURRENT_TIMESTAMP')
+    },
+    updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: db.literal('CURRENT_TIMESTAMP')
     }
 }, {
-    freezeTableName: true
+    freezeTableName: true,
+    timestamps: true
 });
 
 module.exports = User;

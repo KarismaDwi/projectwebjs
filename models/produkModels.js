@@ -1,46 +1,53 @@
-const {DataTypes} = require('sequelize');
+const { DataTypes } = require('sequelize');
 const db = require('../config/database');
 
-const produk = db.define('produk', {
-    id_produk: {
-        type: DataTypes.INTEGER(11),
-        primaryKey: true,   
-        autoIncrement: true
-        },
-    nama_produk: {
-        type: DataTypes.STRING(100),
-        allowNull: false
-    },
-    harga: {
-        type: DataTypes.INTEGER(11),
-        allowNull: false
-    },
-    deskripsi: {
-        type: DataTypes.STRING(100),
-        allowNull: false
-    },
-    stok: {
-        type: DataTypes.INTEGER(11),
-        allowNull: false
-    },
-    gambar: {
-        type: DataTypes.STRING(100),
-        allowNull: false
-    },
-    ukuran: {
-        type: DataTypes.ENUM('Spray', 'Standard bloom', 'Full bloom', 'Bud', 'Mini bouquet', 'Grand bouquet'),
-        allowNull: false
-    },
-    warna: {
-        type: DataTypes.STRING(100),
-        allowNull: true
-    },
-    kategori: {
-        type: DataTypes.STRING(100),
-        allowNull: true
-    },
+const Produk = db.define('Produk', {
+  id_produk: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  name: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  harga: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  deskripsi: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  stok: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  gambar: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  url: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  warna: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  kategori: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  ukuran: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    defaultValue: 'Spray,Standard bloom,Full bloom,Bud,Mini bouquet,Grand bouquet'
+  }
 }, {
-    freezeTableName: true
+  tableName: 'produk',
+  freezeTableName: true,
+  timestamps: false
 });
 
-module.exports = produk;
+module.exports = Produk;
