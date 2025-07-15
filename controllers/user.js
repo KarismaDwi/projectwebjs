@@ -1,9 +1,8 @@
 const User = require('../models/userModels');
 const bcrypt = require('bcrypt');
-const { json } = require('express');
 const jwt = require('jsonwebtoken');
 
-const validRoles = ['admin', 'user'];
+const validRoles = ['admin', 'user', 'karyawan'];
 
 const createUser = async (req, res) => {
     const { username, phone, email, password, address, role } = req.body;
@@ -34,7 +33,7 @@ const createUser = async (req, res) => {
             role
         });
 
-        // === Generate token JWT ===
+        // Generate token JWT
         const payload = { userId: newUser.id, role: newUser.role };
         const token = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1d" });
 
@@ -46,7 +45,7 @@ const createUser = async (req, res) => {
                 email: newUser.email,
                 role: newUser.role
             },
-            accessToken: token, // === Kirim token di response ===
+            accessToken: token,
         });
     } catch (error) {
         console.log(error);
@@ -54,32 +53,35 @@ const createUser = async (req, res) => {
     }
 };
 
-// Update the loginUser function to return userId:
+// Login user by email and filter role to redirect on FE
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+    // Cari user berdasarkan email
     const user = await User.findOne({ where: { email } });
 
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) return res.status(404).json({ message: 'Akun tidak ditemukan' });
     
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ msg: 'Wrong Password' });
+    if (!match) return res.status(400).json({ message: 'Kata sandi salah' });
 
+    // Buat JWT token
     const accessToken = jwt.sign(
       { 
-        userId: user.id,  // Make sure this matches
+        userId: user.id,
         username: user.username,
         email: user.email,
         role: user.role 
       },
       process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: '24h' }  // Increased from 1h
+      { expiresIn: '24h' }
     );
 
+    // Kembalikan role berdasarkan email (role sudah ikut di JWT)
     res.json({ 
       accessToken, 
       role: user.role,
-      userId: user.id  // Add this line
+      user_id: user.id // gunakan user_id konsisten dengan FE
     });
   } catch (error) {
     res.status(500).json({ message: 'Login error', error: error.message });
@@ -91,17 +93,15 @@ const editUser = async (req, res) => {
   const { username, phone, email, password, address, role } = req.body;
 
   try {
-    // Cari user berdasarkan id
     const user = await User.findByPk(userId);
     if (!user) {
       return res.status(404).json({ message: 'User tidak ditemukan' });
     }
 
-    // Update data user
     user.username = username ?? user.username;
     user.phone = phone ?? user.phone;
     user.email = email ?? user.email;
-    user.password = password ?? user.password; // biasanya password harus di-hash dulu ya
+    user.password = password ?? user.password; // hash dulu jika password diubah!
     user.address = address ?? user.address;
     user.role = role ?? user.role;
 
@@ -113,7 +113,6 @@ const editUser = async (req, res) => {
     return res.status(500).json({ message: 'Terjadi kesalahan pada server' });
   }
 };
-
 
 const deleteUser = async (req, res) => {
     const { id } = req.params;
@@ -186,18 +185,17 @@ const getMyProfile = async (req, res) => {
     }
 };
   
-  const getUser = async (req, res) => {
+const getUser = async (req, res) => {
     try {
-        // Mengambil semua data pengguna dari tabel User
         const users = await User.findAll({
-            attributes: ['id', 'username', 'phone', 'email', 'role', 'address']  // Menentukan atribut yang ingin ditampilkan
+            attributes: ['id', 'username', 'phone', 'email', 'role', 'address']
         });
 
         if (!users.length) {
             return res.status(404).json({ message: 'No users found' });
         }
 
-        res.status(200).json(users);  // Mengembalikan array pengguna
+        res.status(200).json(users);
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: 'Error retrieving users', error: error.message });
@@ -206,7 +204,6 @@ const getMyProfile = async (req, res) => {
 
 const getUserById = async (req, res) => {
     const {id} = req.params;
-    console.log('fetching user by id:', id);
     try {
         const user = await User.findByPk(id);
         if (!user) {
@@ -218,5 +215,36 @@ const getUserById = async (req, res) => {
     }
 };
 
-module.exports = { createUser, loginUser, editUser, deleteUser, getMyProfile, getUser, getUserById, getProfile };
+const getEmployees = async (req, res) => {
+    try {
+        const employees = await User.findAll({
+            where: { role: 'karyawan' },
+            attributes: ['id', 'username', 'phone', 'email', 'role', 'address']
+        });
 
+        if (!employees.length) {
+            return res.status(404).json({ message: 'No employees found' });
+        }
+
+        res.status(200).json(employees);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error retrieving employees', error: error.message });
+    }
+};
+
+const getMe = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.userId, {
+            attributes: ['id', 'username', 'email', 'phone', 'address', 'role']
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+module.exports = { createUser, loginUser, editUser, deleteUser, getMyProfile, getUser, getUserById, getProfile, getEmployees, getMe };

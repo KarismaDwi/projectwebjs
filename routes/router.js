@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authenticateUser = require('../middleware/authMiddleware');
 
-const { createUser, loginUser, editUser, deleteUser, getMyProfile, getUser, getUserById, getProfile } = require('../controllers/user');
+const { createUser, loginUser, editUser, deleteUser, getMyProfile, getUser, getUserById, getProfile, getEmployees, getMe } = require('../controllers/user');
 router.post('/register', createUser);
 router.post('/login', loginUser);
 router.put('/edit/:id', editUser);
@@ -10,7 +10,9 @@ router.delete('/hapus/:id', deleteUser);
 router.get('/me', authenticateUser, getMyProfile);
 router.get('/user', getUser); 
 router.get('/profile', authenticateUser, getProfile); // Menggunakan verifyToken untuk mendapatkan profil user
-router.get('/user/:id', authenticateUser, getUserById); // Menggunakan verifyToken untuk mendapatkan user berdasarkan ID
+router.get('/user/:id', authenticateUser, getUserById); 
+router.get('/employees', authenticateUser, getEmployees);
+router.get('/karyawan', authenticateUser, getMe)
 
 const { getProduk, getProdukById, saveProduk, getProdukByKeyword, editProduk, deleteProduk } = require('../controllers/produk');
 router.get('/produk', getProduk);
@@ -45,5 +47,6 @@ router.get('/komplain', authenticateUser, getAllKomplain); // Admin route
 router.get('/komplain/user', authenticateUser, getUserKomplain); // User route  
 router.post('/komplain', authenticateUser, createKomplain); // User route
 //router.put('/komplain/:id', authenticateUser, updateKomplainStatus); // Admin route
+
 
 module.exports = router;

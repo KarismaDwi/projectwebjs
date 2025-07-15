@@ -32,12 +32,12 @@ app.use(FileUpload());
 app.use('/upload', express.static('upload'));
 app.use('/api', router);
 
-db.authenticate()
-.then(async () => {
-    console.log('Koneksi berhasil');
-    await db.sync({alter:true});
-})
-.catch(err => console.log('Error: ' + err));
+// db.authenticate()
+// .then(async () => {
+//     console.log('Koneksi berhasil');
+//     await db.sync({alter:true});
+// })
+// .catch(err => console.log('Error: ' + err));
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {

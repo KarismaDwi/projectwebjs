@@ -1,6 +1,6 @@
 const Sequelize = require('sequelize')
 
-const db = new Sequelize ('data_florist', 'root', '', {
+const db = new Sequelize ('florist', 'root', '', {
     host: 'localhost',
     dialect: 'mysql',
 } );
